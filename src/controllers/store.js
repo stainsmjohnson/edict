@@ -9,8 +9,13 @@ const Store = {
         .then(realm => {
           //check store already exist
           const data = realm.objects(STORE);
+          const user = realm.objectForPrimaryKey(
+            USER,
+            new BSON.ObjectID(store.user_id),
+          );
           const isStoreExist =
-            data.filtered(`name == '${store.name}'`).length > 0;
+            user.stores.filtered(`name == '${store.name}'`).length > 0;
+
           if (isStoreExist) {
             throw new Error('Store already exist');
           }
@@ -19,10 +24,6 @@ const Store = {
           console.log(`----creating new store '${store.name}'`);
 
           realm.write(() => {
-            const user = realm.objectForPrimaryKey(
-              USER,
-              new BSON.ObjectID(store.user_id),
-            );
             const newStore = {
               ...store,
               id: new BSON.ObjectID(),

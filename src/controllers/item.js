@@ -8,9 +8,12 @@ const Item = {
       Realm.open(databaseOptions)
         .then(realm => {
           //check store already exist
-          const data = realm.objects(ITEM);
+          const section = realm.objectForPrimaryKey(
+            SECTION,
+            new BSON.ObjectID(item.section_id),
+          );
           const isItemExist =
-            data.filtered(`name == '${item.name}'`).length > 0;
+            section.items.filtered(`name == '${item.name}'`).length > 0;
           if (isItemExist) {
             throw new Error('Item already exist');
           }
@@ -19,10 +22,6 @@ const Item = {
           console.log(`----creating new item '${item.name}'`);
 
           realm.write(() => {
-            const section = realm.objectForPrimaryKey(
-              SECTION,
-              new BSON.ObjectID(item.section_id),
-            );
             const newItem = {
               ...item,
               id: new BSON.ObjectID(),

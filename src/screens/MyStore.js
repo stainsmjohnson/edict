@@ -20,6 +20,7 @@ import StoreController from '../controllers/store';
 import SectionController from '../controllers/section';
 import ItemController from '../controllers/item';
 import Modal from '../components/Modal';
+import { useDispatch, useSelector } from 'react-redux';
 
 const MEASUREMENTS = [
   { label: 'kilogram', value: 'kg' },
@@ -37,7 +38,7 @@ const StatScreen = () => {
   const [activeStore, setActiveStore] = useState(null);
 
   const [availableStores, setAvailableStores] = useState([]);
-
+  const authState = useSelector(state => state.auth);
   //newstore
   const [storename, setStorename] = useState('');
   //section
@@ -55,14 +56,13 @@ const StatScreen = () => {
   const [modalItemName, setModalItemName] = useState('');
   const [modalItemCost, setModalItemCost] = useState('');
   const [modalItemImage, setModalItemImage] = useState('');
+  const [storeChangeModalVisible, setStoreChangeModalVisible] = useState(false);
 
   const theme = useTheme();
 
   const changeStore = async () => {
     try {
-      const allStores = await StoreController.getAll(
-        '601fb6b068bf7700ecfb8b22',
-      );
+      const allStores = await StoreController.getAll(authState?.user_id);
       console.log(JSON.stringify(allStores));
       setAvailableStores(allStores);
       let activeStore = allStores.find(store => store.isActive === true);
@@ -92,7 +92,7 @@ const StatScreen = () => {
     try {
       const newstore = await StoreController.create({
         name: storename,
-        user_id: '601fb6b068bf7700ecfb8b22',
+        user_id: authState?.user_id,
       });
       console.log(newstore);
     } catch (err) {
@@ -165,16 +165,21 @@ const StatScreen = () => {
         title="Active Store"
         description="uppatty"
         left={props => <List.Icon {...props} icon="store" />}
-        onPress={changeStore}
+        onPress={() => {
+          changeStore();
+          setStoreChangeModalVisible(true);
+        }}
       />
 
       <List.AccordionGroup>
         <FlatList
           data={availableSections}
+          keyExtractor={item => item.id.toString()}
           renderItem={({ item }) => (
             <List.Accordion title={item.title} id={item.id}>
               {item.items.map(item => (
                 <List.Item
+                  key={item.id.toString()}
                   title={item.name}
                   description={item.cost}
                   left={props => (
@@ -230,11 +235,13 @@ const StatScreen = () => {
         <View
           style={{
             width: width - 20,
-            height: 400,
             justifyContent: 'center',
             alignItems: 'stretch',
             backgroundColor: theme.colors.background,
             padding: 16,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            borderRadius: 10,
           }}>
           <Headline
             style={{
@@ -242,7 +249,7 @@ const StatScreen = () => {
             }}>
             Create Store
           </Headline>
-          <View style={{ width: '100%', height: 200 }}>
+          <View style={{ width: '100%' }}>
             <TextInput
               label="store name"
               value={storename}
@@ -251,7 +258,9 @@ const StatScreen = () => {
                 marginBottom: 16,
               }}
             />
-            <Button onPress={createStore}>Create Store</Button>
+            <Button onPress={createStore} mode="contained">
+              Create Store
+            </Button>
           </View>
         </View>
       </Modal>
@@ -262,11 +271,13 @@ const StatScreen = () => {
         <View
           style={{
             width: width - 20,
-            height: 400,
             justifyContent: 'center',
             alignItems: 'stretch',
             backgroundColor: theme.colors.background,
             padding: 16,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            borderRadius: 10,
           }}>
           <Headline
             style={{
@@ -300,7 +311,9 @@ const StatScreen = () => {
                 marginBottom: 16,
               }}
             />
-            <Button onPress={createSection}>Create Section</Button>
+            <Button onPress={createSection} mode="contained">
+              Create Section
+            </Button>
           </View>
         </View>
       </Modal>
@@ -315,6 +328,9 @@ const StatScreen = () => {
             alignItems: 'stretch',
             backgroundColor: theme.colors.background,
             padding: 16,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            borderRadius: 10,
           }}>
           <Headline
             style={{
@@ -382,7 +398,51 @@ const StatScreen = () => {
                 marginBottom: 16,
               }}
             />
-            <Button onPress={createItem}>Create Item</Button>
+            <Button onPress={createItem} mode="contained">
+              Create Item
+            </Button>
+          </View>
+        </View>
+      </Modal>
+      {/* CHANGE STORE MODAL */}
+      <Modal
+        onDismiss={() => setStoreChangeModalVisible(false)}
+        visible={storeChangeModalVisible}>
+        <View
+          style={{
+            width: width - 20,
+            justifyContent: 'center',
+            alignItems: 'stretch',
+            backgroundColor: theme.colors.background,
+            padding: 16,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            borderRadius: 10,
+          }}>
+          <Headline
+            style={{
+              marginBottom: 16,
+            }}>
+            Select Store
+          </Headline>
+          <View style={{ width: '100%' }}>
+            <RadioButton.Group
+              onValueChange={newValue =>
+                setSelectedSection(() =>
+                  availableStores.find(item => item.name === newValue),
+                )
+              }
+              value={selectedSection?.name}>
+              {availableStores.map(store => (
+                <View style={styles.radioContainer}>
+                  <RadioButton value={store.name} />
+                  <Text>{store.name}</Text>
+                </View>
+              ))}
+            </RadioButton.Group>
+            <Button onPress={createStore} mode="contained">
+              Continue
+            </Button>
           </View>
         </View>
       </Modal>

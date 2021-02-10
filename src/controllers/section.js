@@ -8,9 +8,9 @@ const Section = {
       Realm.open(databaseOptions)
         .then(realm => {
           //check store already exist
-          const data = realm.objects(SECTION);
+          const store = realm.objectForPrimaryKey(STORE, sec.store_id);
           const isSectionExist =
-            data.filtered(`title == '${sec.title}'`).length > 0;
+            store.sections.filtered(`title == '${sec.title}'`).length > 0;
           if (isSectionExist) {
             throw new Error('Section already exist');
           }
@@ -19,7 +19,6 @@ const Section = {
           console.log(`----creating new section '${sec.title}'`);
 
           realm.write(() => {
-            const store = realm.objectForPrimaryKey(STORE, sec.store_id);
             const newSection = {
               ...sec,
               id: new BSON.ObjectID(),

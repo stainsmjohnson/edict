@@ -5,7 +5,7 @@ import {
   RefreshControl,
   FlatList,
 } from 'react-native';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Section } from '../components';
 import { getData } from '../staticData';
 import { useTheme } from 'react-native-paper';
@@ -18,6 +18,7 @@ const BillScreen = props => {
   const [loading, setLoading] = useState(false);
   const theme = useTheme();
   const dispatch = useDispatch();
+  const authState = useSelector(state => state.auth);
   useEffect(() => {
     refresh();
   }, []);
@@ -51,9 +52,7 @@ const BillScreen = props => {
 
   const changeStore = async () => {
     try {
-      const allStores = await StoreController.getAll(
-        '601fb6b068bf7700ecfb8b22',
-      );
+      const allStores = await StoreController.getAll(authState?.user_id);
       console.log(JSON.stringify(allStores));
       let activeStore = allStores.find(store => store.isActive === true);
       if (!activeStore) {

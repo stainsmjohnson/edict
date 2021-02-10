@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import SplashScreen from 'react-native-splash-screen';
 import { useTheme, Card, Text, TextInput } from 'react-native-paper';
+import { useDispatch } from 'react-redux';
 import { User } from '../database/db';
 
 const { width, height } = Dimensions.get('screen');
@@ -97,17 +98,28 @@ const Lock = ({ navigation }) => {
 };
 
 const Login = ({ navigation }) => {
+  const dispatch = useDispatch();
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [email, setEmail] = useState('b@aa.com');
+  const [email, setEmail] = useState('grahamstains1999@gmail.com');
   const [password, setPassword] = useState('abcd');
 
   const login = async () => {
+    if (!email || !password) {
+      return;
+    }
     try {
       const dbUser = await User.get({
         email,
         password,
       });
       console.log(`-----login success user ${dbUser.name} , ${dbUser.id}`);
+      dispatch({
+        type: 'login',
+        payload: {
+          user_id: dbUser.id,
+          user_name: dbUser.name,
+        },
+      });
       navigation.navigate('DrowerNav');
     } catch (err) {
       alert(err.message);
@@ -180,6 +192,8 @@ const Signup = ({ navigation, onCreate }) => {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
   const [name, setName] = useState('');
   return (
     <View>
@@ -197,13 +211,6 @@ const Signup = ({ navigation, onCreate }) => {
             height: '100%',
           }}>
           <ScrollView keyboardShouldPersistTaps="always">
-            <TextInput
-              selectionColor={Theme.colors.primary}
-              dense
-              style={{ marginBottom: 16 }}
-              label="Username"
-              left={<TextInput.Icon name="account" />}
-            />
             <TextInput
               dense
               style={{ marginBottom: 16 }}
@@ -240,6 +247,8 @@ const Signup = ({ navigation, onCreate }) => {
               style={{ marginBottom: 16 }}
               label="Confirm password"
               secureTextEntry={!passwordVisible}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
               left={<TextInput.Icon name="key" />}
               right={
                 <TextInput.Icon
@@ -251,13 +260,23 @@ const Signup = ({ navigation, onCreate }) => {
 
             <Button
               primary
-              onPress={() =>
-                onCreate({
-                  email,
-                  password,
-                  name,
-                })
-              }>
+              onPress={() => {
+                if (
+                  name &&
+                  email &&
+                  password &&
+                  confirmPassword &&
+                  password === confirmPassword
+                ) {
+                  onCreate({
+                    email,
+                    password,
+                    name,
+                  });
+                } else {
+                  alert('Fill all details');
+                }
+              }}>
               Create Account
             </Button>
           </ScrollView>
