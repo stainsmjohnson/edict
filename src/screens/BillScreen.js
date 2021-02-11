@@ -8,7 +8,7 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { Section } from '../components';
 import { getData } from '../staticData';
-import { useTheme } from 'react-native-paper';
+import { useTheme, Button } from 'react-native-paper';
 import StoreController from '../controllers/store';
 import SectionController from '../controllers/section';
 
@@ -53,7 +53,6 @@ const BillScreen = props => {
   const changeStore = async () => {
     try {
       const allStores = await StoreController.getAll(authState?.user_id);
-      console.log(JSON.stringify(allStores));
       let activeStore = allStores.find(store => store.isActive === true);
       if (!activeStore) {
         activeStore = allStores?.length ? allStores[0] : null;
@@ -81,6 +80,7 @@ const BillScreen = props => {
       payload: item,
     });
   };
+
   return (
     <SafeAreaView
       style={{

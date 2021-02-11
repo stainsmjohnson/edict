@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Image, StyleSheet, View, Dimensions, FlatList } from 'react-native';
+import {
+  Image,
+  StyleSheet,
+  View,
+  Dimensions,
+  FlatList,
+  ScrollView,
+} from 'react-native';
 import {
   Button,
   Caption,
@@ -14,6 +21,7 @@ import {
   RadioButton,
   Subheading,
   Avatar,
+  Menu,
 } from 'react-native-paper';
 import { insert, getAll } from '../database/db';
 import StoreController from '../controllers/store';
@@ -21,14 +29,17 @@ import SectionController from '../controllers/section';
 import ItemController from '../controllers/item';
 import Modal from '../components/Modal';
 import { useDispatch, useSelector } from 'react-redux';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 
 const MEASUREMENTS = [
-  { label: 'kilogram', value: 'kg' },
-  { label: 'litter', value: 'l' },
-  { label: 'gram', value: 'g' },
+  { label: 'Kilogram', value: 'kg' },
+  { label: 'Litter', value: 'l' },
+  { label: 'Gram', value: 'g' },
+  { label: 'Number', value: 'n' },
 ];
 
-const { width, height } = Dimensions.get('screen');
+const { width: SCREENWIDTH, height } = Dimensions.get('screen');
 
 const StatScreen = () => {
   const [fabsVisible, setFabsVisible] = useState(false);
@@ -57,7 +68,7 @@ const StatScreen = () => {
   const [modalItemCost, setModalItemCost] = useState('');
   const [modalItemImage, setModalItemImage] = useState('');
   const [storeChangeModalVisible, setStoreChangeModalVisible] = useState(false);
-
+  const [editMode, setEditMode] = useState(false);
   const theme = useTheme();
 
   const changeStore = async () => {
@@ -102,6 +113,10 @@ const StatScreen = () => {
 
   const createItem = async () => {
     try {
+      if (editMode) {
+        alert('under dev, not able to save');
+        return;
+      }
       const newItem = await ItemController.create({
         name: modalItemName,
         cost: Number(modalItemCost),
@@ -109,9 +124,12 @@ const StatScreen = () => {
         measurementIn: selectedMeasurement?.value,
         section_id: selectedSections?.id,
       });
+      setItemModalVisible(false);
+      alert('Saved to store');
       console.log(newItem);
     } catch (err) {
       console.log(err.message);
+      alert('Could not save to store, Try again!, reason ' + err.message);
     }
   };
 
@@ -156,6 +174,18 @@ const StatScreen = () => {
       items: [],
     },
   ];
+
+  const pickImage = () => {
+    launchImageLibrary(
+      {
+        mediaType: 'photo',
+      },
+      ({ didCancel, fileName, fileSize, height, type, uri, width }) => {
+        if (!didCancel) setModalItemImage(uri);
+      },
+    );
+  };
+
   return (
     <View
       style={{
@@ -177,19 +207,29 @@ const StatScreen = () => {
           keyExtractor={item => item.id.toString()}
           renderItem={({ item }) => (
             <List.Accordion title={item.title} id={item.id}>
-              {item.items.map(item => (
+              {item.items.map(subitem => (
                 <List.Item
-                  key={item.id.toString()}
-                  title={item.name}
-                  description={item.cost}
+                  key={subitem.id.toString()}
+                  title={subitem.name}
+                  description={subitem.cost}
                   left={props => (
                     <Avatar.Image
                       {...props}
-                      source={{ uri: item.image }}
+                      source={{ uri: subitem.image }}
                       size={40}
                     />
                   )}
-                  onPress={() => alert('Under dev')}
+                  onPress={() => {
+                    setEditMode(true);
+                    setSelectedSections(item);
+                    setSelectedMeasurement(
+                      MEASUREMENTS.find(m => m.value === subitem.measurementIn),
+                    );
+                    setModalItemName(subitem.name);
+                    setModalItemCost(subitem.cost.toString());
+                    setModalItemImage(subitem.image);
+                    setItemModalVisible(true);
+                  }}
                 />
               ))}
             </List.Accordion>
@@ -203,7 +243,10 @@ const StatScreen = () => {
           // color={theme.colors.primary}
           visible={fabsVisible}
           icon="file"
-          onPress={() => setItemModalVisible(true)}
+          onPress={() => {
+            setEditMode(false);
+            setItemModalVisible(true);
+          }}
           style={styles.fab}
         />
         <FAB
@@ -234,7 +277,7 @@ const StatScreen = () => {
       <Modal onDismiss={() => setModalVisible(false)} visible={modalVisible}>
         <View
           style={{
-            width: width - 20,
+            width: SCREENWIDTH - 20,
             justifyContent: 'center',
             alignItems: 'stretch',
             backgroundColor: theme.colors.background,
@@ -270,7 +313,7 @@ const StatScreen = () => {
         visible={sectionModalVisible}>
         <View
           style={{
-            width: width - 20,
+            width: SCREENWIDTH - 20,
             justifyContent: 'center',
             alignItems: 'stretch',
             backgroundColor: theme.colors.background,
@@ -323,7 +366,7 @@ const StatScreen = () => {
         visible={itemModalVisible}>
         <View
           style={{
-            width: width - 20,
+            width: SCREENWIDTH - 20,
             justifyContent: 'center',
             alignItems: 'stretch',
             backgroundColor: theme.colors.background,
@@ -335,33 +378,63 @@ const StatScreen = () => {
           <Headline
             style={{
               marginBottom: 16,
+              textAlign: 'center',
             }}>
-            Create Item
+            {`${editMode ? 'EDIT ITEM' : 'CREATE ITEM'}`}
           </Headline>
-          <View style={{ width: '100%' }}>
-            <View>
-              <Subheading>under which section?</Subheading>
-              <RadioButton.Group
-                onValueChange={newValue =>
-                  setSelectedSections(() =>
-                    availableSections.find(item => item.title === newValue),
-                  )
-                }
-                value={selectedSections?.title}>
-                {availableSections.map(sec => (
-                  <View style={styles.radioContainer}>
-                    <RadioButton value={sec.title} />
-                    <Text>{sec.title}</Text>
-                  </View>
-                ))}
-              </RadioButton.Group>
+          <View style={{ flexDirection: 'row', height: SCREENWIDTH / 3 }}>
+            <View
+              style={{
+                borderRadius: 500,
+                width: SCREENWIDTH / 3,
+                overflow: 'hidden',
+              }}>
+              <Avatar.Image
+                size={SCREENWIDTH / 3}
+                source={{ uri: modalItemImage }}
+              />
+              <Icon
+                onPress={pickImage}
+                name="camera"
+                color={theme.colors.text}
+                size={40}
+                style={{
+                  width: '100%',
+                  height: '50%',
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  position: 'absolute',
+                  justifyContent: 'center',
+                  padding: 10,
+                  bottom: 0,
+                  textAlign: 'center',
+                }}
+              />
             </View>
+            <View style={{ flex: 1 }}>
+              <DropDown
+                label="Under which section?"
+                selected={selectedSections}
+                field="title"
+                data={availableSections}
+                onChange={setSelectedSections}
+              />
+              <DropDown
+                label="How you willmeasure?"
+                selected={selectedMeasurement}
+                field="label"
+                data={MEASUREMENTS}
+                onChange={setSelectedMeasurement}
+              />
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row' }}>
             <TextInput
-              label="Item name"
+              label="Title"
               value={modalItemName}
               onChangeText={setModalItemName}
               style={{
                 marginBottom: 16,
+                flex: 1,
               }}
             />
             <TextInput
@@ -371,37 +444,15 @@ const StatScreen = () => {
               keyboardType="number-pad"
               style={{
                 marginBottom: 16,
+                flex: 1,
+                marginLeft: 5,
               }}
             />
-            <View>
-              <Subheading>How will you measure?</Subheading>
-              <RadioButton.Group
-                onValueChange={newValue =>
-                  setSelectedMeasurement(() =>
-                    MEASUREMENTS.find(item => item.value === newValue),
-                  )
-                }
-                value={selectedMeasurement?.value}>
-                {MEASUREMENTS.map(measurement => (
-                  <View style={styles.radioContainer}>
-                    <RadioButton value={measurement.value} />
-                    <Text>{measurement.label}</Text>
-                  </View>
-                ))}
-              </RadioButton.Group>
-            </View>
-            <TextInput
-              label="Image"
-              value={modalItemImage}
-              onChangeText={setModalItemImage}
-              style={{
-                marginBottom: 16,
-              }}
-            />
-            <Button onPress={createItem} mode="contained">
-              Create Item
-            </Button>
           </View>
+
+          <Button onPress={createItem} mode="contained">
+            Save
+          </Button>
         </View>
       </Modal>
       {/* CHANGE STORE MODAL */}
@@ -410,7 +461,7 @@ const StatScreen = () => {
         visible={storeChangeModalVisible}>
         <View
           style={{
-            width: width - 20,
+            width: SCREENWIDTH - 20,
             justifyContent: 'center',
             alignItems: 'stretch',
             backgroundColor: theme.colors.background,
@@ -444,6 +495,49 @@ const StatScreen = () => {
               Continue
             </Button>
           </View>
+        </View>
+      </Modal>
+    </View>
+  );
+};
+
+const DropDown = ({
+  style,
+  data = [],
+  selected = null,
+  label = 'Unknown',
+  field = 'label',
+  onChange,
+}) => {
+  const [modalVisible, setModalVisible] = useState(false);
+  const theme = useTheme();
+
+  return (
+    <View style={[{ flex: 1 }, style]}>
+      <List.Item
+        title={label}
+        description={selected ? selected[field] : 'none'}
+        onPress={() => {
+          setModalVisible(true);
+        }}
+      />
+      <Modal onDismiss={() => setModalVisible(false)} visible={modalVisible}>
+        <View
+          style={{
+            backgroundColor: theme.colors.card,
+            borderRadius: 10,
+            elevation: 10,
+          }}>
+          {data.map(item => (
+            <Menu.Item
+              onPress={() => {
+                onChange(item);
+                setModalVisible(false);
+              }}
+              title={item[field]}
+              key={item[field]}
+            />
+          ))}
         </View>
       </Modal>
     </View>
